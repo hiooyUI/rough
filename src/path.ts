@@ -15,6 +15,23 @@ export interface Segment {
   point?: Point;
 }
 
+/**
+ * 参照 SVG <path>
+ * M = moveto(M X,Y)：将画笔移动到指定的坐标位置
+ * L = lineto(L X,Y)：画直线到指定的坐标位置
+ * H = horizontal lineto(H X)：画水平线到指定的 X 坐标位置
+ * V = vertical lineto(V Y)：画垂直线到指定的 Y 坐标位置
+ * C = curveto(C X1,Y1,X2,Y2,ENDX,ENDY)：三次贝赛曲线
+ * S = smooth curveto(S X2,Y2,ENDX,ENDY)：平滑曲率
+ * Q = quadratic Belzier curve(Q X,Y,ENDX,ENDY)：二次贝赛曲线
+ * T = smooth quadratic Belzier curveto(T ENDX,ENDY)：映射
+ * A = elliptical Arc(A RX,RY,XROTATION,FLAG1,FLAG2,X,Y)：弧线
+ * Z = closepath()：关闭路径
+ * 
+ * 注释：以上所有命令均允许小写字母。大写表示绝对定位，小写表示相对定位。
+ * https://www.w3school.com.cn/svg/svg_path.asp
+ * https://www.w3school.com.cn/jsref/dom_obj_canvasrenderingcontext2d.asp
+ */
 const PARAMS: { [key: string]: number } = {
   A: 7,
   a: 7,
