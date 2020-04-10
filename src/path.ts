@@ -1,16 +1,19 @@
 import { Point, lineLength } from './geometry';
 
+declare type PathTokenType = 'COMMAND' | 'NUMBER' | 'END_OF_D';
+declare type PathTokenValue = string;
+
 interface PathToken {
-  type: number;
-  text: string;
+  type: PathTokenType;
+  text: PathTokenValue;
 }
 
-function isType(token: PathToken, type: number) {
+function isPathTokenType(token: PathToken, type: PathTokenType) {
   return token.type === type;
 }
 
 export interface Segment {
-  key: string;
+  key: PathTokenValue;
   data: number[];
   point?: Point;
 }
@@ -32,7 +35,7 @@ export interface Segment {
  * https://www.w3school.com.cn/svg/svg_path.asp
  * https://www.w3school.com.cn/jsref/dom_obj_canvasrenderingcontext2d.asp
  */
-const PARAMS: { [key: string]: number } = {
+const PARAMS_LENGTH: { [key: string]: number } = {
   A: 7,
   a: 7,
   C: 6,
@@ -56,9 +59,9 @@ const PARAMS: { [key: string]: number } = {
 };
 
 class ParsedPath {
-  private COMMAND = 0;
-  private NUMBER = 1;
-  private EOD = 2;
+  private COMMAND: PathTokenType = 'COMMAND';
+  private NUMBER: PathTokenType = 'NUMBER';
+  private END_OF_D: PathTokenType = 'END_OF_D';
   private _closed?: boolean;
   segments: Segment[] = [];
 
@@ -82,7 +85,7 @@ class ParsedPath {
         return [];
       }
     }
-    tokens[tokens.length] = { type: this.EOD, text: '' };
+    tokens[tokens.length] = { type: this.END_OF_D, text: '' };
     return tokens;
   }
 
@@ -90,49 +93,49 @@ class ParsedPath {
     const tokens = this.tokenize(d);
     let index = 0;
     let token = tokens[index];
-    let mode: string = 'BOD';
+    let tokenValue: PathTokenValue = 'BEGIN_OF_D';
     this.segments = new Array();
-    while (!isType(token, this.EOD)) {
-      let param_length: number;
+    while (!isPathTokenType(token, this.END_OF_D)) {
+      let paramLength: number;
       const params: number[] = new Array();
-      if (mode === 'BOD') {
+      if (tokenValue === 'BEGIN_OF_D') {
         if (token.text === 'M' || token.text === 'm') {
           index++;
-          param_length = PARAMS[token.text];
-          mode = token.text;
+          paramLength = PARAMS_LENGTH[token.text];
+          tokenValue = token.text;
         } else {
           this.parseData('M0,0' + d);
           return;
         }
       } else {
-        if (isType(token, this.NUMBER)) {
-          param_length = PARAMS[mode];
+        if (isPathTokenType(token, this.NUMBER)) {
+          paramLength = PARAMS_LENGTH[tokenValue];
         } else {
           index++;
-          param_length = PARAMS[token.text];
-          mode = token.text;
+          paramLength = PARAMS_LENGTH[token.text];
+          tokenValue = token.text;
         }
       }
-      if ((index + param_length) < tokens.length) {
-        for (let i = index; i < index + param_length; i++) {
+      if ((index + paramLength) < tokens.length) {
+        for (let i = index; i < index + paramLength; i++) {
           const numbeToken = tokens[i];
-          if (isType(numbeToken, this.NUMBER)) {
+          if (isPathTokenType(numbeToken, this.NUMBER)) {
             params[params.length] = +numbeToken.text;
           }
           else {
-            console.error('Param not a number: ' + mode + ',' + numbeToken.text);
+            console.error('Param not a number: ' + tokenValue + ',' + numbeToken.text);
             return;
           }
         }
-        if (typeof PARAMS[mode] === 'number') {
-          const segment: Segment = { key: mode, data: params };
+        if (typeof PARAMS_LENGTH[tokenValue] === 'number') {
+          const segment: Segment = { key: tokenValue, data: params };
           this.segments.push(segment);
-          index += param_length;
+          index += paramLength;
           token = tokens[index];
-          if (mode === 'M') mode = 'L';
-          if (mode === 'm') mode = 'l';
+          if (tokenValue === 'M') tokenValue = 'L'; // maintaining consistency
+          if (tokenValue === 'm') tokenValue = 'l'; // maintaining consistency
         } else {
-          console.error('Bad segment: ' + mode);
+          console.error('Bad segment: ' + tokenValue);
           return;
         }
       } else {
@@ -153,7 +156,7 @@ class ParsedPath {
     return this._closed;
   }
 
-  processPoints() {
+  processPoints() { // 直接修改 this.segments 数组， 
     let first: Point | null = null;
     let currentPoint: Point = [0, 0];
     for (let i = 0; i < this.segments.length; i++) {
